@@ -1,0 +1,85 @@
+name: CI - analyze, test, Android, Web
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: "3.47.9"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate icons, splash, sounds and store graphics
+        run: |
+          pip install pillow==11.0.0
+          python tool/generate_assets.py
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Create platform folders (android, ios, web) if missing
+        run: |
+          flutter create --platforms=android,ios,web --org com.gamestudio100 --project-name game_100_hexa_sort .
+          python tool/patch_platforms.py
+
+      - run: flutter pub get
+
+      - name: App icons and splash screens
+        run: |
+          dart run flutter_launcher_icons
+          dart run flutter_native_splash:create
+
+      - name: Static analysis
+        run: flutter analyze --no-fatal-infos
+
+      - name: Unit, rule, save and 24-month simulation tests
+        run: flutter test --reporter expanded
+
+      - name: Android release APK + App Bundle
+        run: |
+          flutter build apk --release
+          flutter build appbundle --release
+
+      - name: Web build
+        run: flutter build web --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: game-100-hexa-sort-android
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 14
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: game-100-hexa-sort-web
+          path: build/web
+          retention-days: 14
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: game-100-hexa-sort-store-graphics
+          path: store/
+          retention-days: 30

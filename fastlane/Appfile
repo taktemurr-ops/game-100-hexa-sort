@@ -1,0 +1,4 @@
+package_name("com.gamestudio100.game_100_hexa_sort")
+app_identifier("com.gamestudio100.game_100_hexa_sort")
+# json_key_file(ENV["PLAY_JSON_KEY"])   # Google Play service account (secret)
+# apple_id(ENV["APPLE_ID"])
