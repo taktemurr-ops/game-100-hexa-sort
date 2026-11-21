@@ -9,6 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Ortak çekirdek: https://github.com/taktemurr-ops/studio-core
+  studio_core:
+    git:
+      url: https://github.com/taktemurr-ops/studio-core
+      ref: 828637a468ee4190c715aa71c2a2662d145548d9
   flutter_localizations:
     sdk: flutter
   flutter_riverpod: ^2.6.1

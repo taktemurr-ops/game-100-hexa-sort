@@ -2,10 +2,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../app/arcade_stage.dart';
-import '../app/play_kit.dart';
-import '../app/services/audio.dart';
-import '../core/arcade.dart';
+import 'package:studio_core/app/arcade_stage.dart';
+import 'package:studio_core/app/play_kit.dart';
+import 'package:studio_core/app/services/audio.dart';
+import 'package:studio_core/core/arcade.dart';
 import 'casual_engine.dart';
 
 /// Bright, toy-like vector art for the casual puzzles.
