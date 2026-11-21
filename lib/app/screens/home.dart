@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/level_plan.dart';
 import '../../core/save_store.dart';
+import '../adaptive.dart';
 import '../app_state.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -78,6 +79,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       const AchievementsScreen(),
       const ProfileScreen(),
     ];
+    final wide = Adaptive.of(context) == FormFactor.expanded;
+    final dests = <(Widget, String)>[
+      (const Icon(Icons.home), app.t('home')),
+      (
+        Badge(
+          isLabelVisible: app.session.daily.loginRewardAvailable(app.save, app.session.now()) ||
+              app.session.daily.wheelAvailable(app.save, app.session.now()),
+          child: const Icon(Icons.calendar_today),
+        ),
+        app.t('daily')
+      ),
+      (const Icon(Icons.collections), app.t('collection')),
+      (const Icon(Icons.emoji_events), app.t('achievements')),
+      (const Icon(Icons.person), app.t('profile')),
+    ];
     return Scaffold(
       appBar: AppBar(
         title: Text(app.title),
@@ -98,29 +114,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ],
       ),
       body: SafeArea(
-        child: Column(children: [
-          CurrencyBar(app: app),
-          Expanded(child: pages[_tab]),
+        child: Row(children: [
+          // Tablets, foldables, desktop and web: side navigation rail.
+          if (wide)
+            NavigationRail(
+              selectedIndex: _tab,
+              onDestinationSelected: (i) => setState(() => _tab = i),
+              labelType: NavigationRailLabelType.all,
+              destinations: [
+                for (final d in dests)
+                  NavigationRailDestination(icon: d.$1, label: Text(d.$2)),
+              ],
+            ),
+          if (wide) const VerticalDivider(width: 1),
+          Expanded(
+            child: Column(children: [
+              ContentWidth.wide(child: CurrencyBar(app: app)),
+              Expanded(
+                child: _tab == 2 ? pages[_tab] : ContentWidth(maxWidth: Adaptive.readableWidth + 120, child: pages[_tab]),
+              ),
+            ]),
+          ),
         ]),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
-        destinations: [
-          NavigationDestination(icon: const Icon(Icons.home), label: app.t('home')),
-          NavigationDestination(
-            icon: Badge(
-              isLabelVisible: app.session.daily.loginRewardAvailable(app.save, app.session.now()) ||
-                  app.session.daily.wheelAvailable(app.save, app.session.now()),
-              child: const Icon(Icons.calendar_today),
+      // Phones: bottom navigation bar.
+      bottomNavigationBar: wide
+          ? null
+          : NavigationBar(
+              selectedIndex: _tab,
+              onDestinationSelected: (i) => setState(() => _tab = i),
+              destinations: [
+                for (final d in dests) NavigationDestination(icon: d.$1, label: d.$2),
+              ],
             ),
-            label: app.t('daily'),
-          ),
-          NavigationDestination(icon: const Icon(Icons.collections), label: app.t('collection')),
-          NavigationDestination(icon: const Icon(Icons.emoji_events), label: app.t('achievements')),
-          NavigationDestination(icon: const Icon(Icons.person), label: app.t('profile')),
-        ],
-      ),
     );
   }
 }
@@ -168,13 +194,17 @@ class _HomeTab extends StatelessWidget {
           ),
         ),
         SectionTitle(app.t('modes')),
-        GridView.count(
-          crossAxisCount: MediaQuery.of(context).size.width > 700 ? 3 : 2,
+        // Fixed tile height (not an aspect ratio): narrow phones and wide
+        // tablets get the same readable card, and it can never overflow.
+        GridView(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: Adaptive.columns(MediaQuery.sizeOf(context).width, minTile: 200, max: 4).clamp(2, 4),
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            mainAxisExtent: 116,
+          ),
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-          childAspectRatio: 1.5,
           children: modes.map((m) => _ModeCard(app: app, mode: m)).toList(),
         ),
         const SizedBox(height: 12),
@@ -209,17 +239,37 @@ class _ModeCard extends StatelessWidget {
         onTap: () => openMode(context, app, mode),
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(icon, color: Theme.of(context).colorScheme.primary),
-            const Spacer(),
-            Text(app.t('mode_${mode.name}'), style: const TextStyle(fontWeight: FontWeight.bold)),
-            Text(
-              best != null && best > 0 ? '${app.t('best')}: $best' : app.t('mode_${mode.name}_d'),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ]),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Icon(icon, color: Theme.of(context).colorScheme.primary),
+              // Flexible texts shrink (ellipsis) instead of overflowing with
+              // large system font sizes or very narrow cards.
+              Flexible(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      app.t('mode_${mode.name}'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Flexible(
+                      child: Text(
+                        best != null && best > 0 ? '${app.t('best')}: $best' : app.t('mode_${mode.name}_d'),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

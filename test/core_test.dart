@@ -5,6 +5,7 @@ import 'package:game_100_hexa_sort/core/collection.dart';
 import 'package:game_100_hexa_sort/core/daily.dart';
 import 'package:game_100_hexa_sort/core/game_rules.dart';
 import 'package:game_100_hexa_sort/core/game_session.dart';
+import 'package:game_100_hexa_sort/core/integrity.dart';
 import 'package:game_100_hexa_sort/core/level_plan.dart';
 import 'package:game_100_hexa_sort/core/missions.dart';
 import 'package:game_100_hexa_sort/core/monetization.dart';
@@ -179,6 +180,40 @@ void main() {
       final text = store.exportBackup(SaveData()..gems = 77);
       expect(store.importBackup(text)!.gems, 77);
       expect(store.importBackup('garbage'), isNull);
+    });
+    test('HMAC-SHA256 matches RFC 4231 test vector', () {
+      final mac = Integrity.hex(Integrity.hmacSha256(Integrity.utf8('Jefe'), Integrity.utf8('what do ya want for nothing?')));
+      expect(mac, '5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843');
+      expect(Integrity.hex(Integrity.sha256(Integrity.utf8('abc'))),
+          'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+      expect(Integrity.hex(Integrity.sha256(Integrity.utf8('ğüşİöç €'))).length, 64);
+    });
+    test('edited save is rejected and the last signed backup is used', () async {
+      final mem = MemoryBackend();
+      final store = SaveStore(mem);
+      await store.save(SaveData()..coins = 10);
+      await store.save(SaveData()..coins = 20);
+      // Player edits the stored JSON (coins 20 -> 999999) without the key.
+      mem.data['gs100.save'] = mem.data['gs100.save']!.replaceFirst('"coins":20', '"coins":999999');
+      final l = await SaveStore(mem).load();
+      expect(l.coins, 10);
+      expect(store.exportBackup(l).startsWith('s2:'), isTrue);
+    });
+    test('legacy saves load once, then unsigned data is refused', () async {
+      final mem = MemoryBackend();
+      mem.data['gs100.save'] = SaveStore.wrapLegacy((SaveData()..coins = 7).encode());
+      final store = SaveStore(mem);
+      final l = await store.load();
+      expect(l.coins, 7);
+      await store.save(l); // migrates to the signed format
+      expect(mem.data['gs100.save']!.startsWith('s2:'), isTrue);
+      mem.data['gs100.save'] = SaveStore.wrapLegacy((SaveData()..coins = 5000).encode());
+      mem.data.remove('gs100.save.bak0');
+      expect((await SaveStore(mem).load()).coins, isNot(5000));
+      // Unsigned or foreign-game backups are never imported.
+      expect(store.importBackup(SaveStore.wrapLegacy((SaveData()..gems = 9).encode())), isNull);
+      final other = SaveStore(MemoryBackend(), prefix: 'other_game');
+      expect(store.importBackup(other.exportBackup(SaveData()..gems = 9)), isNull);
     });
   });
 

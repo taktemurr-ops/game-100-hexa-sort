@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/level_plan.dart';
+import '../adaptive.dart';
 import '../app_state.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -19,7 +20,7 @@ class LevelsScreen extends ConsumerWidget {
     final worlds = currentWorld.clamp(1, 1 << 20) + 2;
     return Scaffold(
       appBar: AppBar(title: Text(app.t('worlds'))),
-      body: ListView.builder(
+      body: ContentWidth(child: ListView.builder(
         itemCount: worlds,
         itemBuilder: (c, i) {
           final w = i + 1;
@@ -50,7 +51,7 @@ class LevelsScreen extends ConsumerWidget {
             ),
           );
         },
-      ),
+      )),
     );
   }
 }

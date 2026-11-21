@@ -38,6 +38,9 @@ Altıgen tahtaya renkli yığınlar yerleştir; komşu yığınlarda üstteki ay
 | 5 dil (TR, EN, DE, ES, FR), renk körü modu, animasyon azaltma, yazı boyutu, solak düzen, titreşim | ✅ | `lib/core/strings.dart`, Ayarlar |
 | Özgün ikon, splash, ses efektleri, müzik, mağaza görselleri (kodla üretilir) | ✅ | `tool/generate_assets.py` |
 | CI: analiz, testler, APK + AAB, Web; iOS (manuel); haftalık 10.000 bölüm + 24 ay simülasyonu | ✅ | `.github/workflows/` |
+| Tüm telefonlar ve tabletler: Android 6+ telefon/tablet/katlanabilir/Chromebook, iPhone + iPad (iOS 14+), Split View / çoklu pencere; telefonda dikey, tablette her yön; tablette yan menü (NavigationRail) ve okunabilir genişlik | ✅ | `lib/app/adaptive.dart`, `tool/patch_platforms.py` |
+| Web (PWA): tarayıcıda oynanır, kayıt tarayıcıda saklanır; reklam/satın alma web'de kapalı | ✅ | `flutter build web` |
+| Güvenlik: imzalı kayıt (HMAC-SHA256, elle düzenlenen kayıt reddedilir), imzalı yedek, yalnızca HTTPS, obfuscate edilmiş sürüm derlemeleri, CI'da sır taraması, en az yetkili CI, Dependabot | ✅ | `lib/core/integrity.dart`, `SECURITY.md` |
 
 ## Çalıştırma
 

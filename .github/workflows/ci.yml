@@ -6,6 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Least privilege for every job (read-only token).
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -25,6 +29,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Security - no secrets or keys committed
+        run: python tool/check_secrets.py
 
       - name: Generate icons, splash, sounds and store graphics
         run: |
@@ -57,11 +64,19 @@ jobs:
 
       - name: Android release APK + App Bundle
         run: |
-          flutter build apk --release
-          flutter build appbundle --release
+          # Obfuscated release builds; symbols kept as a private artifact
+          # for de-obfuscating crash reports.
+          flutter build apk --release --obfuscate --split-debug-info=build/symbols/android
+          flutter build appbundle --release --obfuscate --split-debug-info=build/symbols/android
 
-      - name: Web build
-        run: flutter build web --release
+      - name: Web build (also published on GitHub Pages for device testing)
+        run: flutter build web --release --base-href "/game-100-hexa-sort/"
+
+      - name: Package web build for GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
 
       - uses: actions/upload-artifact@v4
         with:
@@ -74,6 +89,12 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          name: game-100-hexa-sort-debug-symbols
+          path: build/symbols
+          retention-days: 90
+
+      - uses: actions/upload-artifact@v4
+        with:
           name: game-100-hexa-sort-web
           path: build/web
           retention-days: 14
@@ -83,3 +104,23 @@ jobs:
           name: game-100-hexa-sort-store-graphics
           path: store/
           retention-days: 30
+
+  # Playable web version on https://<owner>.github.io/game-100-hexa-sort/ so every
+  # phone, tablet and desktop browser can be tested without installing.
+  # Needs Settings > Pages > Source = "GitHub Actions"; if Pages is off the
+  # deploy is skipped without failing CI.
+  pages:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

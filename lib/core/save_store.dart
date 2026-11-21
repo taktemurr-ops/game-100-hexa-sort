@@ -1,3 +1,4 @@
+import 'integrity.dart';
 import 'save_data.dart';
 
 /// Minimal key-value persistence. Implemented with SharedPreferences in the
@@ -29,7 +30,9 @@ class MemoryBackend implements KeyValueBackend {
 enum LoadOutcome { fresh, primary, recoveredFromBackup, corruptReset }
 
 /// Safe saving (doc 6.3, 12.1, 12.11, 12.14):
-/// * every write is wrapped with a checksum;
+/// * every write is signed (HMAC-SHA256, see integrity.dart) so edited or
+///   corrupted saves are detected; legacy Adler-32 saves are still read until
+///   the first signed save has been written;
 /// * the previous good save rotates into N backups before overwriting;
 /// * on load, a corrupt primary falls back to the newest valid backup;
 /// * a "pending" slot makes a crash mid-write recoverable.
@@ -43,6 +46,12 @@ class SaveStore {
   String get _primary => '$prefix.save';
   String get _pending => '$prefix.save.pending';
   String _backup(int i) => '$prefix.save.bak$i';
+  String get _marker => '$prefix.save.v';
+
+  /// Set once a signed (v2) save exists; from then on unsigned legacy data
+  /// is rejected so it cannot be used to bypass the signature.
+  bool _signedSeen = false;
+  int tamperRejects = 0;
 
   LoadOutcome lastOutcome = LoadOutcome.fresh;
   int writeFailures = 0;
@@ -57,10 +66,25 @@ class SaveStore {
     return (b << 16) | a;
   }
 
-  static String wrap(String payload) => '${checksum(payload)}|$payload';
+  static const _v2 = 's2:';
 
-  static String? unwrap(String? stored) {
+  /// Signed envelope: `s2:<hmac-sha256 hex>|<json payload>`.
+  static String wrap(String payload, {String scope = 'gs100'}) =>
+      '$_v2${Integrity.sign(scope, payload)}|$payload';
+
+  /// Legacy (v1) envelope, kept only to read saves written by old builds.
+  static String wrapLegacy(String payload) => '${checksum(payload)}|$payload';
+
+  static String? unwrap(String? stored, {String scope = 'gs100', bool allowLegacy = true}) {
     if (stored == null) return null;
+    if (stored.startsWith(_v2)) {
+      final i = stored.indexOf('|');
+      if (i <= _v2.length) return null;
+      final sig = stored.substring(_v2.length, i);
+      final payload = stored.substring(i + 1);
+      return Integrity.equals(sig, Integrity.sign(scope, payload)) ? payload : null;
+    }
+    if (!allowLegacy) return null;
     final i = stored.indexOf('|');
     if (i <= 0) return null;
     final sum = int.tryParse(stored.substring(0, i));
@@ -70,8 +94,11 @@ class SaveStore {
   }
 
   SaveData? _parse(String? stored) {
-    final payload = unwrap(stored);
-    if (payload == null) return null;
+    final payload = unwrap(stored, scope: prefix, allowLegacy: !_signedSeen);
+    if (payload == null) {
+      if (stored != null) tamperRejects++;
+      return null;
+    }
     try {
       return SaveData.decode(payload);
     } catch (_) {
@@ -80,6 +107,7 @@ class SaveStore {
   }
 
   Future<SaveData> load() async {
+    _signedSeen = (await backend.read(_marker)) == '2';
     final primaryRaw = await backend.read(_primary);
     final pendingRaw = await backend.read(_pending);
     // A completed pending write that never got promoted is the newest data.
@@ -116,10 +144,10 @@ class SaveStore {
   /// the next save retries).
   Future<bool> save(SaveData data) async {
     try {
-      final wrapped = wrap(data.encode());
+      final wrapped = wrap(data.encode(), scope: prefix);
       await backend.write(_pending, wrapped);
       final old = await backend.read(_primary);
-      if (unwrap(old) != null) {
+      if (unwrap(old, scope: prefix, allowLegacy: !_signedSeen) != null) {
         for (var i = backupCount - 1; i > 0; i--) {
           final prev = await backend.read(_backup(i - 1));
           if (prev != null) await backend.write(_backup(i), prev);
@@ -127,6 +155,10 @@ class SaveStore {
         await backend.write(_backup(0), old!);
       }
       await _promote(wrapped);
+      if (!_signedSeen) {
+        await backend.write(_marker, '2');
+        _signedSeen = true;
+      }
       return true;
     } catch (_) {
       writeFailures++;
@@ -135,9 +167,18 @@ class SaveStore {
   }
 
   /// Exportable backup string (player can copy it / cloud sync later).
-  String exportBackup(SaveData d) => wrap(d.encode());
+  /// Backups are always signed; unsigned (legacy) text is never imported.
+  String exportBackup(SaveData d) => wrap(d.encode(), scope: prefix);
 
-  SaveData? importBackup(String text) => _parse(text.trim());
+  SaveData? importBackup(String text) {
+    final payload = unwrap(text.trim(), scope: prefix, allowLegacy: false);
+    if (payload == null) return null;
+    try {
+      return SaveData.decode(payload);
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<void> wipe() async {
     await backend.remove(_primary);

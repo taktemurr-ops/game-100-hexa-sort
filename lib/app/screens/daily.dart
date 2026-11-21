@@ -30,7 +30,7 @@ class DailyScreen extends ConsumerWidget {
         Text(app.t('streak', {'n': s.loginStreak})),
         const SizedBox(height: 8),
         SizedBox(
-          height: 92,
+          height: 100,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: DailySystems.loginCycle.length,
@@ -49,12 +49,16 @@ class DailyScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(12),
                   border: isToday ? Border.all(color: Theme.of(c).colorScheme.primary, width: 2) : null,
                 ),
-                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text(app.t('day_n', {'n': i + 1}), style: const TextStyle(fontSize: 12)),
-                  Icon(r.gems > 0 ? Icons.diamond : Icons.monetization_on,
-                      color: r.gems > 0 ? Colors.cyan : Colors.amber),
-                  Text('${r.coins}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                ]),
+                // scaleDown: the tile never overflows, whatever the font scale.
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Text(app.t('day_n', {'n': i + 1}), style: const TextStyle(fontSize: 12)),
+                    Icon(r.gems > 0 ? Icons.diamond : Icons.monetization_on,
+                        color: r.gems > 0 ? Colors.cyan : Colors.amber),
+                    Text('${r.coins}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ]),
+                ),
               );
             },
           ),

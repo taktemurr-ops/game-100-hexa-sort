@@ -5,6 +5,9 @@ on:
     - cron: "17 2 * * 1"   # weekly, Monday 02:17 UTC (keeps Actions minutes low)
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   FLUTTER_VERSION: "3.47.9"
 

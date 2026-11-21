@@ -44,3 +44,6 @@ Kod, analitik ve hata kayıtlarını cihazda kuyrukta tutar (`AnalyticsSink`). F
 - [ ] Haftalık dayanıklılık testi yeşil (10.000 bölüm + 730 gün simülasyon)
 - [ ] Gerçek Android cihazda: reklam, satın alma (test hesabı), uçak modu, uygulamayı öldürüp devam
 - [ ] Gerçek iPhone'da aynı testler (TestFlight)
+- [ ] Tablet testleri: Android tablet (yatay + dikey, çoklu pencere), katlanabilir (açık/kapalı), iPad (Split View / Stage Manager)
+- [ ] Web: Chrome, Safari (iOS/macOS), Firefox; dar ve geniş pencere; sayfayı yenileyince kayıt korunuyor
+- [ ] Güvenlik: `tool/check_secrets.py` temiz, sürüm derlemeleri obfuscate, `build/symbols` arşivlendi, Dependabot uyarıları kapalı

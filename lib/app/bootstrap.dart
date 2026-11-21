@@ -11,6 +11,7 @@ import '../core/game_session.dart';
 import '../core/save_store.dart';
 import '../core/strings.dart';
 import '../core/telemetry.dart';
+import 'adaptive.dart';
 import 'app_state.dart';
 import 'game_api.dart';
 import 'screens/home.dart';
@@ -80,6 +81,7 @@ void bootstrap(GameConfig config) {
     ));
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Adaptive.applyOrientationPolicy();
       perf.recordStartup(startWatch.elapsedMilliseconds);
       await errors.launchSucceeded();
       await state.afterStart();
@@ -113,6 +115,12 @@ class _GameAppState extends ConsumerState<GameApp> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    // Foldables, iPad Split View / Stage Manager, Android multi-window.
+    Adaptive.applyOrientationPolicy();
   }
 
   @override
