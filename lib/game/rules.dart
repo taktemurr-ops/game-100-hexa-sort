@@ -1,7 +1,7 @@
-import '../core/arcade.dart';
-import '../core/level_plan.dart';
-import '../core/missions.dart';
-import '../core/stats.dart';
+import 'package:studio_core/core/arcade.dart';
+import 'package:studio_core/core/level_plan.dart';
+import 'package:studio_core/core/missions.dart';
+import 'package:studio_core/core/stats.dart';
 import 'casual_engine.dart';
 
 class HexaSortRules extends ArcadeRules<CasualLevel> {

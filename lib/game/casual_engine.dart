@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 
-import '../core/arcade.dart';
-import '../core/level_plan.dart';
-import '../core/rng.dart';
+import 'package:studio_core/core/arcade.dart';
+import 'package:studio_core/core/level_plan.dart';
+import 'package:studio_core/core/rng.dart';
 
 /// Casual sorting / merging puzzles on the shared arcade framework:
 /// merge fruits (physics), screw puzzle, goods sort, triple tile match and
