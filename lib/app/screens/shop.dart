@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/monetization.dart';
+import '../adaptive.dart';
 import '../app_state.dart';
 import '../parental_gate.dart';
 import '../widgets.dart';
@@ -26,7 +27,7 @@ class ShopScreen extends ConsumerWidget {
     final disabled = app.session.emergency.purchasesDisabled;
     return Scaffold(
       appBar: AppBar(title: Text(app.t('shop'))),
-      body: ListView(padding: const EdgeInsets.all(16), children: [
+      body: ContentWidth(child: ListView(padding: const EdgeInsets.all(16), children: [
         CurrencyBar(app: app),
         if (!ps.available || disabled)
           Card(child: ListTile(leading: const Icon(Icons.info_outline), title: Text(app.t('store_unavailable')))),
@@ -58,7 +59,7 @@ class ShopScreen extends ConsumerWidget {
                 }
               : null,
         ),
-      ]),
+      ])),
     );
   }
 

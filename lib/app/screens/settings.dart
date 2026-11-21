@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/strings.dart';
+import '../adaptive.dart';
 import '../app_state.dart';
 import '../widgets.dart';
 import 'onboarding.dart';
@@ -16,7 +17,7 @@ class SettingsScreen extends ConsumerWidget {
     final s = app.save;
     return Scaffold(
       appBar: AppBar(title: Text(app.t('settings'))),
-      body: ListView(children: [
+      body: ContentWidth(child: ListView(children: [
         ListTile(
           leading: const Icon(Icons.language),
           title: Text(app.t('language')),
@@ -129,7 +130,7 @@ class SettingsScreen extends ConsumerWidget {
           applicationVersion: const String.fromEnvironment('APP_VERSION', defaultValue: '1.0.0'),
           child: Text(app.t('about')),
         ),
-      ]),
+      ])),
     );
   }
 }

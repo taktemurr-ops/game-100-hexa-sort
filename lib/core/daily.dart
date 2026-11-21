@@ -46,7 +46,7 @@ class Reward {
   }
 }
 
-/// Daily login, wheel, surprise, comeback, daily record and weekly goal
+/// Daily login, daily gift, surprise, comeback, daily record and weekly goal
 /// (doc 4.2 items 1, 6, 7, 8, 9, 10). All computed locally from the trusted
 /// clock so they run for 24 months without any server.
 class DailySystems {
@@ -93,35 +93,36 @@ class DailySystems {
     return r;
   }
 
-  // ---- Wheel ---------------------------------------------------------------
+  // ---- Daily gift ----------------------------------------------------------
+  // Replaces the former lucky wheel: no chance element at all. The gift for
+  // each day is fixed by a public rotation and shown before it is opened, so
+  // there is nothing that resembles a game of chance (store policy, all ages).
+  // API names keep the old "wheel" wording so existing saves stay compatible.
   static const wheelSlices = <Reward>[
     Reward(coins: 50),
     Reward(hints: 1),
     Reward(coins: 100),
     Reward(boosters: 1),
-    Reward(coins: 25),
+    Reward(coins: 75),
     Reward(gems: 1),
-    Reward(coins: 200),
-    Reward(hints: 2),
+    Reward(coins: 150, hints: 1),
   ];
-  static const wheelWeights = [22, 14, 16, 10, 20, 5, 6, 7];
 
   bool wheelAvailable(SaveData s, DateTime now) => s.lastWheelDay != DateKeys.day(now);
 
-  /// Deterministic for a given day so restarting the app cannot re-roll.
+  /// Index of today's gift: plain rotation by calendar day, no randomness.
   int wheelResult(SaveData s, DateTime now) {
-    final r = SeededRandom(mixSeed([
-      stableHash(gameId),
-      stableHash(DateKeys.day(now)),
-      s.firstLaunchMs & 0xFFFFFFFF,
-    ]));
-    return r.weighted(wheelWeights);
+    final d = DateKeys.daysBetween('2026-01-01', DateKeys.day(now));
+    final n = wheelSlices.length;
+    return ((d % n) + n) % n;
   }
+
+  /// Today's gift, for showing it before it is opened.
+  Reward todaysGift(DateTime now) => wheelSlices[wheelResult(SaveData(), now)];
 
   Reward? spinWheel(SaveData s, DateTime now) {
     if (!wheelAvailable(s, now)) return null;
-    final idx = wheelResult(s, now);
-    final r = wheelSlices[idx];
+    final r = wheelSlices[wheelResult(s, now)];
     r.applyTo(s);
     s.lastWheelDay = DateKeys.day(now);
     s.addStat(Stat.wheelSpins);
