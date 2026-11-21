@@ -85,6 +85,20 @@ def android():
 </network-security-config>
 """,
         )
+    # R8 strips Room's generated WorkDatabase_Impl (WorkManager comes in via
+    # google_mobile_ads), which crashes release builds at startup with
+    # "Failed to create an instance of androidx.work.impl.WorkDatabase".
+    # The Flutter Gradle plugin applies android/app/proguard-rules.pro.
+    rules = "android/app/proguard-rules.pro"
+    keep = """
+-keep class * extends androidx.room.RoomDatabase { <init>(); }
+-keep class androidx.work.impl.WorkDatabase_Impl { *; }
+-keep class androidx.work.impl.** extends androidx.room.RoomDatabase { *; }
+-dontwarn androidx.work.**
+"""
+    old = read(rules) if os.path.exists(rules) else ""
+    if "WorkDatabase_Impl" not in old:
+        write(rules, old + keep)
     for gradle in ["android/app/build.gradle.kts", "android/app/build.gradle"]:
         if not os.path.exists(gradle):
             continue

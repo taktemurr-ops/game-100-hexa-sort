@@ -252,7 +252,7 @@ void main() {
       expect(d.comebackReward(s, DateTime(2026, 1, 10), gap), isNotNull);
       expect(d.comebackReward(s, DateTime(2026, 1, 10), gap), isNull);
     });
-    test('wheel once per day, deterministic', () {
+    test('daily gift once per day, fixed rotation', () {
       final d = DailySystems('x');
       final s = SaveData();
       final day = DateTime(2026, 3, 3);
@@ -260,6 +260,12 @@ void main() {
       expect(d.spinWheel(s, day), isNotNull);
       expect(d.spinWheel(s, day), isNull);
       expect(d.wheelResult(s, day), idx);
+      // No chance element: consecutive days follow a fixed rotation.
+      final n = DailySystems.wheelSlices.length;
+      for (var i = 0; i < n * 2; i++) {
+        expect(d.wheelResult(s, day.add(Duration(days: i))), (idx + i) % n);
+      }
+      expect(d.todaysGift(day), DailySystems.wheelSlices[idx]);
     });
     test('missions: 4 daily, 7 weekly, same for everyone', () {
       final m = MissionBoard('x', const []);

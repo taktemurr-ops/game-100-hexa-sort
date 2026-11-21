@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,7 +9,7 @@ import '../widgets.dart';
 import 'home.dart';
 import 'play.dart';
 
-/// Daily login, wheel, surprise, daily/weekly levels, missions, records.
+/// Daily login, daily gift, surprise, daily/weekly levels, missions, records.
 class DailyScreen extends ConsumerWidget {
   const DailyScreen({super.key});
 
@@ -74,7 +72,7 @@ class DailyScreen extends ConsumerWidget {
           child: Text(d.loginRewardAvailable(s, now) ? app.t('claim') : app.t('claimed')),
         ),
 
-        // ---- Wheel & surprise ----
+        // ---- Daily gift & surprise ----
         SectionTitle(app.t('wheel')),
         _Wheel(app: app),
         SectionTitle(app.t('surprise')),
@@ -189,97 +187,28 @@ class _MissionTile extends StatelessWidget {
   }
 }
 
-class _Wheel extends StatefulWidget {
+class _Wheel extends StatelessWidget {
   final AppState app;
   const _Wheel({required this.app});
 
   @override
-  State<_Wheel> createState() => _WheelState();
-}
-
-class _WheelState extends State<_Wheel> with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 2800));
-  double _target = 0;
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  Future<void> _spin() async {
-    final app = widget.app;
-    final idx = app.session.daily.wheelResult(app.save, app.session.now());
-    final n = DailySystems.wheelSlices.length;
-    final slice = 2 * math.pi / n;
-    _target = 6 * math.pi + (n - idx) * slice - slice / 2;
-    if (app.save.reducedMotion) {
-      _c.value = 1;
-    } else {
-      await _c.forward(from: 0);
-    }
-    final r = app.spinWheel();
-    if (r != null && mounted) _rewardDialog(context, app, r);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final app = widget.app;
-    final available = app.session.daily.wheelAvailable(app.save, app.session.now());
-    return Column(children: [
-      SizedBox(
-        width: 220,
-        height: 220,
-        child: Stack(alignment: Alignment.center, children: [
-          AnimatedBuilder(
-            animation: _c,
-            builder: (_, __) => Transform.rotate(
-              angle: Curves.easeOutCubic.transform(_c.value) * _target,
-              child: CustomPaint(size: const Size(220, 220), painter: _WheelPainter()),
-            ),
-          ),
-          const Positioned(top: 0, child: Icon(Icons.arrow_drop_down, size: 40)),
-        ]),
+    final now = app.session.now();
+    final available = app.session.daily.wheelAvailable(app.save, now);
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.redeem, color: Colors.orange, size: 36),
+        title: RewardChips(reward: app.session.daily.todaysGift(now)),
+        trailing: FilledButton(
+          onPressed: available
+              ? () {
+                  final r = app.spinWheel();
+                  if (r != null) _rewardDialog(context, app, r);
+                }
+              : null,
+          child: Text(available ? app.t('spin') : app.t('claimed')),
+        ),
       ),
-      FilledButton(
-        onPressed: available && !_c.isAnimating ? _spin : null,
-        child: Text(available ? app.t('spin') : app.t('come_back_tomorrow')),
-      ),
-    ]);
+    );
   }
-}
-
-class _WheelPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final n = DailySystems.wheelSlices.length;
-    final c = size.center(Offset.zero);
-    final r = size.width / 2 - 4;
-    final rect = Rect.fromCircle(center: c, radius: r);
-    final sweep = 2 * math.pi / n;
-    for (var i = 0; i < n; i++) {
-      final paint = Paint()..color = HSLColor.fromAHSL(1, i * 360 / n, 0.7, 0.55).toColor();
-      canvas.drawArc(rect, -math.pi / 2 + i * sweep, sweep, true, paint);
-      final reward = DailySystems.wheelSlices[i];
-      final label = reward.coins > 0
-          ? '${reward.coins}'
-          : reward.gems > 0
-              ? '💎${reward.gems}'
-              : reward.hints > 0
-                  ? '💡${reward.hints}'
-                  : '⚡${reward.boosters}';
-      final tp = TextPainter(
-        text: TextSpan(text: label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      final a = -math.pi / 2 + (i + 0.5) * sweep;
-      final pos = c + Offset(math.cos(a), math.sin(a)) * r * 0.65;
-      tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
-    }
-    canvas.drawCircle(c, 18, Paint()..color = Colors.white);
-  }
-
-  @override
-  bool shouldRepaint(_WheelPainter old) => false;
 }
