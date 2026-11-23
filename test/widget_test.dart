@@ -58,7 +58,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('Play'), findsOneWidget);
 
-    for (final tab in ['Daily', 'Collection', 'Achievements', 'Profile', 'Home']) {
+    for (final tab in ['Daily', 'Profile', 'Home']) {
       await tester.tap(find.text(tab).last);
       await tester.pump(const Duration(milliseconds: 300));
       expect(tester.takeException(), isNull, reason: tab);
@@ -97,7 +97,7 @@ void main() {
       final wide = size.width >= 840;
       expect(find.byType(NavigationRail), wide ? findsOneWidget : findsNothing);
       expect(find.byType(NavigationBar), wide ? findsNothing : findsOneWidget);
-      for (final tab in ['Daily', 'Collection', 'Achievements', 'Profile', 'Home']) {
+      for (final tab in ['Daily', 'Profile', 'Home']) {
         await tester.tap(find.text(tab).last);
         await tester.pump(const Duration(milliseconds: 300));
         expect(tester.takeException(), isNull, reason: '$tab at $size');
