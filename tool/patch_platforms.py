@@ -99,6 +99,18 @@ def android():
     old = read(rules) if os.path.exists(rules) else ""
     if "WorkDatabase_Impl" not in old:
         write(rules, old + keep)
+    # R8 strips Room's generated WorkDatabase_Impl (WorkManager comes in via
+    # google_mobile_ads), which crashes release builds at startup.
+    rules = "android/app/proguard-rules.pro"
+    keep = """
+-keep class * extends androidx.room.RoomDatabase { <init>(); }
+-keep class androidx.work.impl.WorkDatabase_Impl { *; }
+-keep class androidx.work.impl.** extends androidx.room.RoomDatabase { *; }
+-dontwarn androidx.work.**
+"""
+    old = read(rules) if os.path.exists(rules) else ""
+    if "WorkDatabase_Impl" not in old:
+        write(rules, old + keep)
     for gradle in ["android/app/build.gradle.kts", "android/app/build.gradle"]:
         if not os.path.exists(gradle):
             continue
@@ -111,6 +123,11 @@ def android():
         else:
             s = s.replace("minSdkVersion flutter.minSdkVersion", "minSdkVersion Math.max(flutter.minSdkVersion, 23)")
             s = s.replace("minSdk flutter.minSdkVersion", "minSdk Math.max(flutter.minSdkVersion, 23)")
+        # Yerel bildirim eklentisi Java 8+ kütüphaneleri ister (desugaring).
+        if kts and "isCoreLibraryDesugaringEnabled" not in s:
+            s = s.replace("compileOptions {", "compileOptions {\n        isCoreLibraryDesugaringEnabled = true", 1)
+        if kts and "desugar_jdk_libs" not in s:
+            s += '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
         # Release signing from CI secrets when available (see docs/RELEASE.md).
         if kts and os.environ.get("ANDROID_KEYSTORE_PATH") and "gs100Release" not in s:
             s = s.replace(
