@@ -13,7 +13,7 @@ dependencies:
   studio_core:
     git:
       url: https://github.com/taktemurr-ops/studio-core
-      ref: 828637a468ee4190c715aa71c2a2662d145548d9
+      ref: 05acd1e648dcb04c962281272f3fb806fc9ccc99
   flutter_localizations:
     sdk: flutter
   flutter_riverpod: ^2.6.1
